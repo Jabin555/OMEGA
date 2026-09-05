@@ -1,651 +1,375 @@
-import { logger } from '../utils/logger.js';
-
-export const botConfig = {
-  // =========================
-  // BOT PRESENCE (what users see under the bot name)
-  // =========================
-  // `status` options:
-  // - "online"    = green dot
-  // - "idle"      = yellow moon
-  // - "dnd"       = red do-not-disturb
-  // - "invisible" = appears offline
-  presence: {
-    // Current online state shown on Discord.
-    status: "idle",
-
-    // Activity lines shown under the bot name.
-    // `type` number mapping from Discord:
-    // 0 = Playing
-    // 1 = Streaming
-    // 2 = Listening
-    // 3 = Watching
-    // 4 = Custom
-    // 5 = Competing
-    activities: [
-      {
-        name: "Custom Status", // required by Discord API, not shown in the client
-        state: "Watching Porn",     // this is what people actually see
-        type: 4,               // Custom
-      },
-    ],
-  },
-
-  // =========================
-  // COMMAND BEHAVIOR
-  // =========================
-  commands: {
-    // Bot owner user IDs (comma-separated in OWNER_IDS env var).
-    // Owners can access owner/admin-level bot commands.
-    owners: process.env.OWNER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) || [],
-
-    // Default wait time between command uses (in seconds).
-    defaultCooldown: 3,
-
-    // If true, old commands are removed before re-registering.
-    deleteCommands: false,
-
-    // Optional server ID retained for tutorial compatibility; not used for command registration.
-    testGuildId: process.env.TEST_GUILD_ID,
-
-    // When true (or MAINTENANCE_MODE=true), only bot owners can run commands.
-    maintenanceMode: process.env.MAINTENANCE_MODE === "true",
-
-    // Command prefix for text-based commands (e.g., "!" for "!ping").
-    // Supports both slash commands and prefix commands.
-    prefix: process.env.PREFIX || "!",
-  },
-
-  // =========================
-  // APPLICATIONS SYSTEM
-  // =========================
-  applications: {
-    // Default questions shown when someone fills out an application.
-    defaultQuestions: [
-      { question: "What is your name?", required: true },
-      { question: "How old are you?", required: true },
-      { question: "Why do you want to join?", required: true },
-    ],
-
-    // Embed colors by application status.
-    statusColors: {
-      pending: "#FFA500",
-      approved: "#00FF00",
-      denied: "#FF0000",
-    },
-
-    // How long users must wait before submitting another application (hours).
-    applicationCooldown: 24,
-
-    // Auto-delete denied applications after this many days.
-    deleteDeniedAfter: 7,
-
-    // Auto-delete approved applications after this many days.
-    deleteApprovedAfter: 30,
-
-    // Role IDs allowed to manage applications.
-    managerRoles: [], // Will be populated from environment or database
-  },
-
-  // =========================
-  // EMBED COLORS & BRANDING
-  // =========================
-  // IMPORTANT: This is the SINGLE SOURCE OF TRUTH for all bot colors
-  embeds: {
-    colors: {
-      // Main brand colors.
-      primary: "#336699",
-      secondary: "#2F3136",
-
-      // Standard status colors for success/error/warning/info messages.
-      success: "#57F287",
-      error: "#ED4245",
-      warning: "#FEE75C",
-      info: "#3498DB",
-
-      // Neutral utility colors.
-      light: "#FFFFFF",
-      dark: "#202225",
-      gray: "#99AAB5",
-
-      // Discord-style palette shortcuts.
-      blurple: "#5865F2",
-      green: "#57F287",
-      yellow: "#FEE75C",
-      fuchsia: "#EB459E",
-      red: "#ED4245",
-      black: "#000000",
-
-      // Feature-specific colors.
-      giveaway: {
-        active: "#57F287",
-        ended: "#ED4245",
-      },
-      ticket: {
-        open: "#57F287",
-        claimed: "#FAA61A",
-        closed: "#ED4245",
-        pending: "#99AAB5",
-      },
-      economy: "#F1C40F",
-      birthday: "#E91E63",
-      moderation: "#9B59B6",
-
-      // Ticket priority color mapping.
-      priority: {
-        none: "#95A5A6",
-        low: "#3498db",
-        medium: "#2ecc71",
-        high: "#f1c40f",
-        urgent: "#e74c3c",
-      },
-    },
-    footer: {
-      // Default footer text used in bot embeds.
-      text: "Titan Bot",
-      // Footer icon URL (null = no icon).
-      icon: null,
-    },
-    // Default thumbnail URL for embeds (null = no thumbnail).
-    thumbnail: null,
-    author: {
-      // Optional default embed author block.
-      name: null,
-      icon: null,
-      url: null,
-    },
-  },
-
-  // =========================
-  // ECONOMY SETTINGS
-  // =========================
-  economy: {
-    currency: {
-      // Currency display name.
-      name: "coins",
-      // Plural display name.
-      namePlural: "coins",
-      // Currency symbol shown in balances.
-      symbol: "$",
-    },
-
-    // Starting balance for new users.
-    startingBalance: 0,
-
-    // Maximum bank amount before upgrades (if upgrades are used).
-    baseBankCapacity: 100000,
-
-    // Daily reward amount.
-    dailyAmount: 100,
-
-    // Work command random payout range.
-    workMin: 10,
-    workMax: 100,
-
-    // Beg command random payout range.
-    begMin: 5,
-    begMax: 50,
-
-    // Command cooldowns (milliseconds).
-    cooldowns: {
-      daily: 24 * 60 * 60 * 1000,
-      work: 60 * 60 * 1000,
-      crime: 2 * 60 * 60 * 1000,
-      rob: 4 * 60 * 60 * 1000,
-    },
-
-    // Chance to succeed when robbing (0.4 = 40%).
-    robSuccessRate: 0.4,
-
-    // Jail time after failed rob (milliseconds).
-    // 3600000 = 1 hour.
-    robFailJailTime: 3600000,
-  },
-
-  // =========================
-  // SHOP SETTINGS
-  // =========================
-  // Add shop defaults here when needed.
-  shop: {
-
-  },
-
-  // =========================
-  // TICKET SYSTEM
-  // =========================
-  tickets: {
-    // Category ID where new tickets are created (null = no forced category).
-    defaultCategory: null,
-
-    // Role IDs allowed to manage/support tickets.
-    supportRoles: [],
-
-    // Priority options users/staff can assign.
-    priorities: {
-      none: {
-        emoji: "⚪",
-        color: "#95A5A6",
-        label: "None",
-      },
-      low: {
-        emoji: "🟢",
-        color: "#2ECC71",
-        label: "Low",
-      },
-      medium: {
-        emoji: "🟡",
-        color: "#F1C40F",
-        label: "Medium",
-      },
-      high: {
-        emoji: "🔴",
-        color: "#E74C3C",
-        label: "High",
-      },
-      urgent: {
-        emoji: "🚨",
-        color: "#E91E63",
-        label: "Urgent",
-      },
-    },
-
-    // Default priority for new tickets.
-    defaultPriority: "none",
-
-    // Category ID where closed tickets are archived.
-    archiveCategory: null,
-
-    // Channel ID where ticket logs are sent.
-    logChannel: null,
-  },
-
-  // =========================
-  // GIVEAWAY SETTINGS
-  // =========================
-  giveaways: {
-    // Default giveaway duration in milliseconds.
-    // 86400000 = 24 hours.
-    defaultDuration: 86400000,
-
-    // Allowed winner count range.
-    minimumWinners: 1,
-    maximumWinners: 10,
-
-    // Allowed giveaway duration range in milliseconds.
-    // 300000 = 5 minutes.
-    minimumDuration: 300000,
-    // 2592000000 = 30 days.
-    maximumDuration: 2592000000,
-
-    // Role IDs allowed to host giveaways.
-    allowedRoles: [],
-
-    // Role IDs that bypass giveaway restrictions.
-    bypassRoles: [],
-  },
-
-  // =========================
-  // BIRTHDAY SETTINGS
-  // =========================
-  birthday: {
-    // Role ID given to users on their birthday.
-    defaultRole: null,
-
-    // Channel ID where birthday announcements are posted.
-    announcementChannel: null,
-
-    // Timezone used to calculate birthday dates.
-    timezone: "UTC",
-  },
-
-  // =========================
-  // VERIFICATION SETTINGS
-  // =========================
-  verification: {
-    // Message shown when posting the verification panel.
-    defaultMessage: "Click the button below to verify yourself and gain access to the server!",
-
-    // Text on the verification button.
-    defaultButtonText: "Verify",
-
-    // Automatic verification behavior.
-    autoVerify: {
-      // How automatic verification decides who is auto-approved:
-      // - "none"        = everyone is auto-verified immediately
-      // - "account_age" = account must be older than set days
-      // - "server_size" = auto-verify everyone only in smaller servers
-      defaultCriteria: "none",
-
-      // Days used when `defaultCriteria` is `account_age`.
-      defaultAccountAgeDays: 7,
-
-      // Member count threshold used when `defaultCriteria` is `server_size`.
-      // Example: 1000 means auto-verify if server has fewer than 1000 members.
-      serverSizeThreshold: 1000,
-
-      // Allowed safety limits for account-age requirements.
-      // 1 = minimum day, 365 = maximum days.
-      minAccountAge: 1,
-      maxAccountAge: 365,
-
-      // If true, user receives a DM after verification.
-      sendDMNotification: true,
-
-      // Human-readable descriptions for each criteria mode.
-      criteria: {
-        account_age: "Account must be older than specified days",
-        server_size: "All users if server has less than 1000 members",
-        none: "All users immediately"
-      }
-    },
-
-    // Minimum time between verification attempts (milliseconds).
-    // 5000 = 5 seconds.
-    verificationCooldown: 5000,
-
-    // Maximum failed attempts allowed inside the time window below.
-    maxVerificationAttempts: 3,
-
-    // Time window for counting attempts (milliseconds).
-    // 60000 = 1 minute.
-    attemptWindow: 60000,
-
-    // In-memory safety limits (helps avoid unbounded memory growth).
-    maxCooldownEntries: 10000,
-    maxAttemptEntries: 10000,
-    // Cleanup frequency for cooldown/attempt maps (milliseconds).
-    // 300000 = 5 minutes.
-    cooldownCleanupInterval: 300000,
-    // Maximum metadata payload size for audit entries (bytes).
-    maxAuditMetadataBytes: 4096,
-    // Maximum number of audit entries kept in memory.
-    maxInMemoryAuditEntries: 1000,
-    // If true, log every verification action.
-    logAllVerifications: true,
-    // If true, preserve verification audit history.
-    keepAuditTrail: true,
-  },
-
-  // =========================
-  // WELCOME / GOODBYE MESSAGES
-  // =========================
-  welcome: {
-    // Welcome template posted when a user joins.
-    // Placeholders: {user}, {server}, {memberCount}
-    defaultWelcomeMessage:
-      "Welcome {user} to {server}! We now have {memberCount} members!",
-    // Goodbye template posted when a user leaves.
-    // Placeholders: {user}, {memberCount}
-    defaultGoodbyeMessage:
-      "{user} has left the server. We now have {memberCount} members.",
-    // Channel ID for welcome messages.
-    defaultWelcomeChannel: null,
-    // Channel ID for goodbye messages.
-    defaultGoodbyeChannel: null,
-  },
-
-  // =========================
-  // COUNTER CHANNELS
-  // =========================
-  counters: {
-    defaults: {
-      // Default naming/description templates for counter entries.
-      name: "{name} Counter",
-      description: "Server {name} counter",
-      // Channel type used for counters (typically "voice").
-      type: "voice",
-      // Channel name format. `{count}` is replaced automatically.
-      channelName: "{name}-{count}",
-    },
-    permissions: {
-      // Default denied permissions for the counter channel.
-      deny: ["VIEW_CHANNEL"],
-      // Default allowed permissions for the counter channel.
-      allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"],
-    },
-    messages: {
-      // Default response messages for counter actions.
-      created: "✅ Created counter **{name}**",
-      deleted: "🗑️ Deleted counter **{name}**",
-      updated: "🔄 Updated counter **{name}**",
-    },
-    types: {
-      // Built-in counter types and how each count is calculated.
-      members: {
-        name: "👥 Members",
-        description: "Total members in the server",
-        getCount: (guild) => guild.memberCount.toString(),
-      },
-      bots: {
-        name: "🤖 Bots",
-        description: "Total bot accounts in the server",
-        getCount: (guild) =>
-          guild.members.cache.filter((m) => m.user.bot).size.toString(),
-      },
-      members_only: {
-        name: "👤 Humans",
-        description: "Total human members (non-bots)",
-        getCount: (guild) =>
-          guild.members.cache.filter((m) => !m.user.bot).size.toString(),
-      },
-    },
-  },
-
-  // =========================
-  // GENERIC BOT MESSAGES
-  // =========================
-  messages: {
-    noPermission: "You do not have permission to use this command.",
-    cooldownActive: "Please wait {time} before using this command again.",
-    errorOccurred: "An error occurred while executing this command.",
-    missingPermissions:
-      "I am missing required permissions to perform this action.",
-    commandDisabled: "This command has been disabled.",
-    maintenanceMode: "The bot is currently in maintenance mode.",
-  },
-
-  // =========================
-  // FEATURE TOGGLES
-  // =========================
-  // Set any feature to `false` to disable it globally.
-  features: {
-    // Core systems.
-    economy: true,
-    leveling: true,
-    moderation: true,
-    logging: true,
-    welcome: true,
-
-    // Community engagement systems.
-    tickets: true,
-    giveaways: true,
-    birthday: true,
-    counter: true,
-
-    // Security and self-service systems.
-    verification: true,
-    reactionRoles: true,
-    joinToCreate: true,
-
-    // Utility/quality-of-life modules.
-    voice: true,
-    search: true,
-    tools: true,
-    utility: true,
-    community: true,
-    fun: true,
-    music: true,
-  },
+/**
+ * bot.js — A starter "OwO-style" Discord economy bot
+ * ----------------------------------------------------
+ * Features:
+ *  - Prefix commands (default: "owo ")
+ *  - Currency system (cowoncy) stored in a local JSON file (data.json)
+ *  - Hunting & battling with cooldowns and random rewards
+ *  - Daily rewards with streak tracking
+ *  - Gambling: coinflip (cf) and slots (sl)
+ *  - Balance / leaderboard
+ *  - Marriage system (marry / divorce / pat)
+ *
+ * Setup:
+ *  1. npm install discord.js
+ *  2. Create a `.env` file (or set env var) with DISCORD_TOKEN=your_bot_token
+ *  3. node bot.js
+ *
+ * This is a foundation, not a clone — extend commands, add real animals,
+ * shop items, gems, etc. as you go. Data persistence is a flat JSON file,
+ * which is fine for small servers but should be swapped for SQLite/Postgres
+ * if you expect concurrent writes at scale.
+ */
+
+const fs = require('fs');
+const path = require('path');
+const {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  EmbedBuilder,
+} = require('discord.js');
+
+// ---------- CONFIG ----------
+const PREFIX = 'owo ';
+const TOKEN = process.env.DISCORD_TOKEN || 'PUT_YOUR_TOKEN_HERE';
+const DATA_FILE = path.join(__dirname, 'data.json');
+
+const COOLDOWNS = {
+  hunt: 10 * 1000,        // 10 seconds
+  battle: 10 * 1000,      // 10 seconds
+  daily: 24 * 60 * 60 * 1000, // 24 hours
+  pat: 5 * 1000,
 };
 
-export function validateConfig(config) {
-  const errors = [];
+// ---------- DATA LAYER ----------
+// Structure:
+// {
+//   "userId": {
+//     cowoncy: 0,
+//     lastHunt: 0,
+//     lastBattle: 0,
+//     lastDaily: 0,
+//     lastPat: 0,
+//     dailyStreak: 0,
+//     marriedTo: null,
+//     animals: []
+//   }
+// }
 
-  if (process.env.NODE_ENV !== 'production') {
-    logger.debug('Environment variables check:');
-    logger.debug('DISCORD_TOKEN exists:', !!process.env.DISCORD_TOKEN);
-    logger.debug('TOKEN exists:', !!process.env.TOKEN);
-    logger.debug('CLIENT_ID exists:', !!process.env.CLIENT_ID);
-    logger.debug('GUILD_ID exists:', !!process.env.GUILD_ID);
-    logger.debug('POSTGRES_HOST exists:', !!process.env.POSTGRES_HOST);
-    logger.debug('NODE_ENV:', process.env.NODE_ENV);
+function loadData() {
+  if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify({}, null, 2));
   }
+  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+}
 
-  if (!process.env.DISCORD_TOKEN && !process.env.TOKEN) {
-    errors.push("Bot token is required (DISCORD_TOKEN or TOKEN environment variable)");
+function saveData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+function getUser(data, id) {
+  if (!data[id]) {
+    data[id] = {
+      cowoncy: 0,
+      lastHunt: 0,
+      lastBattle: 0,
+      lastDaily: 0,
+      lastPat: 0,
+      dailyStreak: 0,
+      marriedTo: null,
+      animals: [],
+    };
   }
+  return data[id];
+}
 
-  if (!process.env.CLIENT_ID) {
-    errors.push("Client ID is required (CLIENT_ID environment variable)");
-  }
+function fmt(n) {
+  return n.toLocaleString('en-US');
+}
 
-  if (process.env.NODE_ENV === 'production') {
-    // A full connection URL (DATABASE_URL / POSTGRES_URL) satisfies all Postgres
-    // requirements, matching how src/config/database/postgres.js resolves the pool config.
-    const hasConnectionUrl = Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL);
+function onCooldown(lastTimestamp, cooldownMs) {
+  const now = Date.now();
+  const remaining = lastTimestamp + cooldownMs - now;
+  return remaining > 0 ? remaining : 0;
+}
 
-    if (!hasConnectionUrl) {
-      if (!process.env.POSTGRES_HOST) {
-        errors.push("PostgreSQL connection is required in production (set DATABASE_URL/POSTGRES_URL, or POSTGRES_HOST)");
+function fmtTime(ms) {
+  const s = Math.ceil(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+// ---------- GAME CONTENT ----------
+const ANIMALS = [
+  { name: 'Rabbit', rarity: 'common', value: 10 },
+  { name: 'Fox', rarity: 'common', value: 15 },
+  { name: 'Owl', rarity: 'uncommon', value: 30 },
+  { name: 'Wolf', rarity: 'uncommon', value: 45 },
+  { name: 'Panda', rarity: 'rare', value: 100 },
+  { name: 'Dragon', rarity: 'legendary', value: 500 },
+];
+
+function randomAnimal() {
+  const roll = Math.random();
+  if (roll < 0.55) return ANIMALS[0];
+  if (roll < 0.75) return ANIMALS[1];
+  if (roll < 0.88) return ANIMALS[2];
+  if (roll < 0.96) return ANIMALS[3];
+  if (roll < 0.995) return ANIMALS[4];
+  return ANIMALS[5];
+}
+
+const BATTLE_MONSTERS = ['a slime', 'a goblin', 'a wild boar', 'a rogue knight', 'a shadow beast'];
+
+// ---------- CLIENT ----------
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+  partials: [Partials.Channel],
+});
+
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+  if (!message.content.toLowerCase().startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
+  const command = args.shift().toLowerCase();
+
+  const data = loadData();
+  const userId = message.author.id;
+  const user = getUser(data, userId);
+
+  try {
+    switch (command) {
+      case 'hunt': {
+        const wait = onCooldown(user.lastHunt, COOLDOWNS.hunt);
+        if (wait > 0) {
+          return message.reply(`⏳ You're tired from your last hunt. Try again in ${fmtTime(wait)}.`);
+        }
+        user.lastHunt = Date.now();
+
+        const animal = randomAnimal();
+        const cowoncyGain = Math.floor(animal.value * (0.5 + Math.random() * 0.5));
+        user.cowoncy += cowoncyGain;
+        user.animals.push(animal.name);
+
+        saveData(data);
+        return message.reply(
+          `🏹 You went hunting and found a **${animal.name}** (${animal.rarity})! You earned **${fmt(cowoncyGain)} cowoncy**.`
+        );
       }
-      if (!process.env.POSTGRES_USER) {
-        errors.push("PostgreSQL user is required in production (set DATABASE_URL/POSTGRES_URL, or POSTGRES_USER)");
+
+      case 'battle': {
+        const wait = onCooldown(user.lastBattle, COOLDOWNS.battle);
+        if (wait > 0) {
+          return message.reply(`⏳ You're recovering from your last battle. Try again in ${fmtTime(wait)}.`);
+        }
+        user.lastBattle = Date.now();
+
+        const monster = BATTLE_MONSTERS[Math.floor(Math.random() * BATTLE_MONSTERS.length)];
+        const won = Math.random() < 0.7; // 70% win chance
+        if (won) {
+          const reward = 20 + Math.floor(Math.random() * 80);
+          user.cowoncy += reward;
+          saveData(data);
+          return message.reply(`⚔️ You fought ${monster} and **won**! You earned **${fmt(reward)} cowoncy**.`);
+        } else {
+          const loss = Math.min(user.cowoncy, 10 + Math.floor(Math.random() * 30));
+          user.cowoncy -= loss;
+          saveData(data);
+          return message.reply(`💀 You fought ${monster} and **lost**. You dropped **${fmt(loss)} cowoncy** fleeing.`);
+        }
       }
-      if (!process.env.POSTGRES_PASSWORD) {
-        errors.push("PostgreSQL password is required in production (set DATABASE_URL/POSTGRES_URL, or POSTGRES_PASSWORD)");
+
+      case 'daily': {
+        const wait = onCooldown(user.lastDaily, COOLDOWNS.daily);
+        if (wait > 0) {
+          return message.reply(`⏳ You've already claimed today's reward. Come back in ${fmtTime(wait)}.`);
+        }
+        // streak resets if more than 48h have passed since last claim
+        const brokeStreak = Date.now() - user.lastDaily > COOLDOWNS.daily * 2;
+        user.dailyStreak = brokeStreak ? 1 : user.dailyStreak + 1;
+        user.lastDaily = Date.now();
+
+        const base = 100;
+        const streakBonus = Math.min(user.dailyStreak * 10, 200);
+        const total = base + streakBonus;
+        user.cowoncy += total;
+
+        saveData(data);
+        return message.reply(
+          `🎁 Daily reward claimed! You earned **${fmt(total)} cowoncy** (streak: ${user.dailyStreak} days).`
+        );
       }
+
+      case 'balance':
+      case 'bal': {
+        const target = message.mentions.users.first() || message.author;
+        const targetUser = getUser(data, target.id);
+        saveData(data);
+        return message.reply(`💰 **${target.username}** has **${fmt(targetUser.cowoncy)} cowoncy**.`);
+      }
+
+      case 'zoo': {
+        if (user.animals.length === 0) {
+          return message.reply(`🦊 You haven't caught any animals yet. Try \`${PREFIX}hunt\`.`);
+        }
+        const counts = {};
+        for (const a of user.animals) counts[a] = (counts[a] || 0) + 1;
+        const list = Object.entries(counts)
+          .map(([name, count]) => `${name} x${count}`)
+          .join(', ');
+        return message.reply(`🦁 Your zoo: ${list}`);
+      }
+
+      case 'cf':
+      case 'coinflip': {
+        const amount = parseInt(args[0], 10);
+        if (!amount || amount <= 0) {
+          return message.reply(`Usage: \`${PREFIX}cf <amount>\``);
+        }
+        if (amount > user.cowoncy) {
+          return message.reply(`You don't have that much cowoncy. Balance: ${fmt(user.cowoncy)}.`);
+        }
+        const win = Math.random() < 0.5;
+        if (win) {
+          user.cowoncy += amount;
+          saveData(data);
+          return message.reply(`🪙 Heads! You won **${fmt(amount)} cowoncy**. New balance: ${fmt(user.cowoncy)}.`);
+        } else {
+          user.cowoncy -= amount;
+          saveData(data);
+          return message.reply(`🪙 Tails! You lost **${fmt(amount)} cowoncy**. New balance: ${fmt(user.cowoncy)}.`);
+        }
+      }
+
+      case 'sl':
+      case 'slots': {
+        const amount = parseInt(args[0], 10);
+        if (!amount || amount <= 0) {
+          return message.reply(`Usage: \`${PREFIX}sl <amount>\``);
+        }
+        if (amount > user.cowoncy) {
+          return message.reply(`You don't have that much cowoncy. Balance: ${fmt(user.cowoncy)}.`);
+        }
+        const symbols = ['🍒', '🍋', '🍇', '⭐', '💎'];
+        const spin = () => symbols[Math.floor(Math.random() * symbols.length)];
+        const [a, b, c] = [spin(), spin(), spin()];
+        let multiplier = 0;
+        if (a === b && b === c) multiplier = 5;
+        else if (a === b || b === c || a === c) multiplier = 1.5;
+
+        const result = Math.floor(amount * multiplier) - amount;
+        user.cowoncy += result;
+        saveData(data);
+
+        return message.reply(
+          `🎰 [ ${a} | ${b} | ${c} ]\n${result >= 0 ? `You won **${fmt(result)} cowoncy**!` : `You lost **${fmt(-result)} cowoncy**.`} New balance: ${fmt(user.cowoncy)}.`
+        );
+      }
+
+      case 'marry': {
+        const target = message.mentions.users.first();
+        if (!target || target.id === userId) {
+          return message.reply(`Mention someone to propose to: \`${PREFIX}marry @user\``);
+        }
+        if (user.marriedTo) {
+          return message.reply(`You're already married to <@${user.marriedTo}>. Divorce first with \`${PREFIX}divorce\`.`);
+        }
+        const targetUser = getUser(data, target.id);
+        if (targetUser.marriedTo) {
+          return message.reply(`That person is already married to someone else.`);
+        }
+        user.marriedTo = target.id;
+        targetUser.marriedTo = userId;
+        saveData(data);
+        return message.reply(`💍 Congratulations! You are now married to <@${target.id}>!`);
+      }
+
+      case 'divorce': {
+        if (!user.marriedTo) {
+          return message.reply(`You're not married to anyone.`);
+        }
+        const partner = getUser(data, user.marriedTo);
+        partner.marriedTo = null;
+        user.marriedTo = null;
+        saveData(data);
+        return message.reply(`💔 You are now divorced.`);
+      }
+
+      case 'pat': {
+        const target = message.mentions.users.first();
+        if (!target) {
+          return message.reply(`Mention someone to pat: \`${PREFIX}pat @user\``);
+        }
+        const wait = onCooldown(user.lastPat, COOLDOWNS.pat);
+        if (wait > 0) {
+          return message.reply(`⏳ Slow down! Try again in ${fmtTime(wait)}.`);
+        }
+        user.lastPat = Date.now();
+        const reward = 1 + Math.floor(Math.random() * 5);
+        user.cowoncy += reward;
+        saveData(data);
+        return message.reply(`🖐️ You gave <@${target.id}> a nice pat and found **${fmt(reward)} cowoncy** on the ground!`);
+      }
+
+      case 'leaderboard':
+      case 'lb': {
+        const sorted = Object.entries(data)
+          .sort((a, b) => b[1].cowoncy - a[1].cowoncy)
+          .slice(0, 10);
+        if (sorted.length === 0) return message.reply('No one has any cowoncy yet!');
+
+        const embed = new EmbedBuilder()
+          .setTitle('🏆 Cowoncy Leaderboard')
+          .setColor(0xffcc00);
+
+        let description = '';
+        for (let i = 0; i < sorted.length; i++) {
+          const [id, u] = sorted[i];
+          description += `**${i + 1}.** <@${id}> — ${fmt(u.cowoncy)} cowoncy\n`;
+        }
+        embed.setDescription(description);
+        return message.reply({ embeds: [embed] });
+      }
+
+      case 'help': {
+        const embed = new EmbedBuilder()
+          .setTitle('📖 Bot Commands')
+          .setColor(0x00b0f4)
+          .setDescription(
+            [
+              `\`${PREFIX}hunt\` — hunt for animals & cowoncy`,
+              `\`${PREFIX}battle\` — fight monsters for cowoncy`,
+              `\`${PREFIX}daily\` — claim your daily reward`,
+              `\`${PREFIX}balance [@user]\` — check cowoncy balance`,
+              `\`${PREFIX}zoo\` — view your collected animals`,
+              `\`${PREFIX}cf <amount>\` — coinflip gamble`,
+              `\`${PREFIX}sl <amount>\` — slots gamble`,
+              `\`${PREFIX}marry @user\` / \`${PREFIX}divorce\` — marriage system`,
+              `\`${PREFIX}pat @user\` — pat someone for a small reward`,
+              `\`${PREFIX}leaderboard\` — top cowoncy holders`,
+            ].join('\n')
+          );
+        return message.reply({ embeds: [embed] });
+      }
+
+      default:
+        return; // unknown command, ignore
     }
+  } catch (err) {
+    console.error('Command error:', err);
+    return message.reply('⚠️ Something went wrong running that command.');
   }
+});
 
-  return errors;
-}
-
-const configErrors = validateConfig(botConfig);
-if (configErrors.length > 0) {
-  logger.error("Bot configuration errors:", configErrors.join("\n"));
-  if (process.env.NODE_ENV === "production") {
-    process.exit(1);
-  }
-}
-
-export const BotConfig = botConfig;
-
-const COMMAND_CATEGORY_FEATURE_MAP = {
-  birthday: "birthday",
-  community: "community",
-  economy: "economy",
-  fun: "fun",
-  giveaway: "giveaways",
-  jointocreate: "joinToCreate",
-  leveling: "leveling",
-  logging: "logging",
-  moderation: "moderation",
-  music: "music",
-  reaction_roles: "reactionRoles",
-  search: "search",
-  serverstats: "counter",
-  ticket: "tickets",
-  tools: "tools",
-  utility: "utility",
-  verification: "verification",
-  welcome: "welcome",
-};
-
-function normalizeCategoryKey(category) {
-  return String(category || "").trim().toLowerCase().replace(/\s+/g, "_");
-}
-
-export function getCommandPrefix() {
-  return botConfig.commands?.prefix ?? "!";
-}
-
-export function getBotOwners() {
-  return (botConfig.commands?.owners ?? [])
-    .map((id) => String(id).trim())
-    .filter(Boolean);
-}
-
-export function isBotOwner(userId) {
-  if (!userId) {
-    return false;
-  }
-
-  return getBotOwners().includes(String(userId));
-}
-
-export function isMaintenanceMode() {
-  return botConfig.commands?.maintenanceMode === true;
-}
-
-export function getBotMessage(key, replacements = {}) {
-  let message = botConfig.messages?.[key] || key;
-
-  for (const [placeholder, value] of Object.entries(replacements)) {
-    message = message.replace(new RegExp(`\\{${placeholder}\\}`, "g"), String(value));
-  }
-
-  return message;
-}
-
-export function isFeatureEnabled(featureKey) {
-  if (!featureKey) {
-    return true;
-  }
-
-  return botConfig.features?.[featureKey] !== false;
-}
-
-export function isCommandCategoryEnabled(category) {
-  const normalized = normalizeCategoryKey(category);
-
-  if (!normalized || normalized === "core") {
-    return true;
-  }
-
-  const featureKey = COMMAND_CATEGORY_FEATURE_MAP[normalized];
-  if (!featureKey) {
-    return true;
-  }
-
-  return isFeatureEnabled(featureKey);
-}
-
-export function getApplicationStatusColor(status) {
-  const colors = botConfig.applications?.statusColors || {};
-  const hex = colors[status];
-  return hex ? getColor(hex) : getColor(status === "approved" ? "success" : status === "denied" ? "error" : "warning");
-}
-
-export function getDefaultApplicationQuestions() {
-  return (botConfig.applications?.defaultQuestions || []).map((entry) =>
-    typeof entry === "string" ? entry : entry.question,
-  ).filter(Boolean);
-}
-
-export function getColor(path, fallback = "#99AAB5") {
-  
-  if (typeof path === "number") return path;
-  if (typeof path === "string" && path.startsWith("#")) {
-    
-    return parseInt(path.replace("#", ""), 16);
-  }
-  const result = path
-    .split(".")
-    .reduce(
-      (obj, key) => (obj && obj[key] !== undefined ? obj[key] : fallback),
-      botConfig.embeds.colors,
-    );
-  
-  if (typeof result === "string" && result.startsWith("#")) {
-    return parseInt(result.replace("#", ""), 16);
-  }
-  return result;
-}
-
-export function getRandomColor() {
-  const colors = Object.values(botConfig.embeds.colors).flatMap((color) =>
-    typeof color === "string" ? color : Object.values(color),
-  );
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-export default botConfig;
+client.login(TOKEN);
